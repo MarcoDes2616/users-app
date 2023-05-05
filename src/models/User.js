@@ -18,6 +18,19 @@ const User = sequelize.define('user', {
     password: {
         type: DataTypes.STRING,
         allowNull: false
+    },
+    country: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    isVerified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
+    image: {
+        type: DataTypes.TEXT,
+        allowNull: false
     }
 });
 

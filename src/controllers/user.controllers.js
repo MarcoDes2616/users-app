@@ -2,6 +2,7 @@ const catchError = require('../utils/catchError');
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const sendEmail = require('../utils/sendMail');
 require('dotenv').config();
 
 const getAll = catchError(async(req, res) => {
@@ -12,6 +13,20 @@ const getAll = catchError(async(req, res) => {
 const create = catchError(async(req, res) => {
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
     const result = await User.create({...req.body, password: hashedPassword})
+
+    const tokenToVerify = jwt.sign(
+		{ result }, // payload
+		process.env.TOKEN_SECRET, // clave secreta
+		{ expiresIn: '24h' } // OPCIONAL: Tiempo en el que expira el token
+)
+    await sendEmail({
+        to: result.email,
+        subject: "Verificación de Email",
+        html: `
+        <a href="${req.body.frontBaseURL}/verify_email/${tokenToVerify}">Click en el enlace para verificar E-mail</a>
+        `
+    })
+
     return res.status(201).json(result);
 });
 
@@ -65,6 +80,17 @@ const getMe = catchError(async(req, res) => {
     res.json({user: req.user})
 });
 
+const verifyEmail = catchError(async(req, res) => {
+    const { token } = req.params
+    const data = jwt.verify(
+        token,
+        process.env.TOKEN_SECRET)
+
+    await User.update({isVerified: true}, {where: {id: data.result.id}})
+
+    res.json({success: true})
+});
+
 module.exports = {
     getAll,
     create,
@@ -72,5 +98,6 @@ module.exports = {
     remove,
     update,
     login,
-    getMe
+    getMe,
+    verifyEmail
 }
