@@ -91,6 +91,47 @@ const verifyEmail = catchError(async(req, res) => {
     res.json({success: true})
 });
 
+const resetPaswwordMail = catchError( async(req, res) => {
+    const { email } = req.body
+
+    const user = await User.findOne({where: {email}})
+
+    if (!user) {
+        return res.status(401).json({message: "User no found"})
+    }
+
+    const tokenToVerify = jwt.sign(
+		{ user }, // payload
+		process.env.TOKEN_SECRET, // clave secreta
+		{ expiresIn: '24h' } // OPCIONAL: Tiempo en el que expira el token
+)
+
+    await sendEmail({
+        to: user.email,
+        subject: "Reset password",
+        html: `
+        <h3>Estas intentanto recuperar tu contraseña</h3>
+        <a href="${req.body.frontBaseUrl}/reset_password/${tokenToVerify}">Click en el enlace para reset E-mail</a>
+        `
+    })
+
+    res.json({success: true})
+})
+
+const updatePassword = catchError( async(req,res) => {
+    const {token} = req.params
+
+    const data = jwt.verify(
+        token,
+        process.env.TOKEN_SECRET)
+    
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    
+    await User.update({password: hashedPassword}, {where: {id: data.user.id}})
+
+    res.status(201).json({success: true})
+})
+
 module.exports = {
     getAll,
     create,
@@ -99,5 +140,7 @@ module.exports = {
     update,
     login,
     getMe,
-    verifyEmail
+    verifyEmail,
+    resetPaswwordMail,
+    updatePassword
 }
