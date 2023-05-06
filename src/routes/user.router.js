@@ -9,13 +9,13 @@ userRouter.route('/')
     .post(create);
     
 userRouter.route("/logged")
-        .get(getMe)
+    .get(getMe)
 
 userRouter.route("/login")
     .post(login)
 
 userRouter.route("/me")
-    .get(getMe)
+    .get(verifyJWT, getMe)
 
 userRouter.route("/reset_password")
     .post(resetPaswwordMail)
