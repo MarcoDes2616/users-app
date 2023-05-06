@@ -105,6 +105,7 @@ const resetPaswwordMail = catchError( async(req, res) => {
 		process.env.TOKEN_SECRET, // clave secreta
 		{ expiresIn: '24h' } // OPCIONAL: Tiempo en el que expira el token
 )
+    await User.update({resetCode: tokenToVerify}, {where: {id: user.id}})
 
     await sendEmail({
         to: user.email,
@@ -121,13 +122,19 @@ const resetPaswwordMail = catchError( async(req, res) => {
 const updatePassword = catchError( async(req,res) => {
     const {token} = req.params
 
+    const user = await User.findOne({where: {resetCode: token}})
+
+    if (!user) {
+        return res.status(401).json({message: Unauthorized})
+    }
+
     const data = jwt.verify(
         token,
         process.env.TOKEN_SECRET)
     
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
     
-    await User.update({password: hashedPassword}, {where: {id: data.user.id}})
+    await User.update({password: hashedPassword, resetCode: null}, {where: {id: data.user.id}})
 
     res.status(201).json({success: true})
 })

@@ -31,6 +31,10 @@ const User = sequelize.define('user', {
     image: {
         type: DataTypes.TEXT,
         allowNull: false
+    },
+    resetCode: {
+        type: DataTypes.TEXT,
+        allowNull: true
     }
 });
 
