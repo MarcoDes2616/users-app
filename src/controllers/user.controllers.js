@@ -13,7 +13,7 @@ const getAll = catchError(async(req, res) => {
 const create = catchError(async(req, res) => {
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
     const result = await User.create({...req.body, password: hashedPassword})
-
+    
     const tokenToVerify = jwt.sign(
 		{ result }, // payload
 		process.env.TOKEN_SECRET, // clave secreta
@@ -23,7 +23,7 @@ const create = catchError(async(req, res) => {
         to: result.email,
         subject: "Verificación de Email",
         html: `
-        <a href="${req.body.frontBaseURL}/verify_email/${tokenToVerify}">Click en el enlace para verificar E-mail</a>
+        <a href="${req.body.frontBaseUrl}/verify_email/${tokenToVerify}">Click en el enlace para verificar E-mail</a>
         `
     })
 
@@ -60,6 +60,9 @@ const login = catchError(async(req, res) => {
     if (!user) {
         return res.status(401).json({message: "Invalid credentials"})
     }
+    if (!user.isVerified) {
+        return res.status(401).json({message: "User no verified"})
+    }
     
     const isValid = await bcrypt.compare(password, user.password)
 
@@ -93,20 +96,16 @@ const verifyEmail = catchError(async(req, res) => {
 
 const resetPaswwordMail = catchError( async(req, res) => {
     const { email } = req.body
-
     const user = await User.findOne({where: {email}})
-
     if (!user) {
         return res.status(401).json({message: "User no found"})
     }
-
     const tokenToVerify = jwt.sign(
 		{ user }, // payload
 		process.env.TOKEN_SECRET, // clave secreta
-		{ expiresIn: '24h' } // OPCIONAL: Tiempo en el que expira el token
+		{ expiresIn: '1h' } // OPCIONAL: Tiempo en el que expira el token
 )
     await User.update({resetCode: tokenToVerify}, {where: {id: user.id}})
-
     await sendEmail({
         to: user.email,
         subject: "Reset password",
@@ -115,27 +114,21 @@ const resetPaswwordMail = catchError( async(req, res) => {
         <a href="${req.body.frontBaseUrl}/reset_password/${tokenToVerify}">Click en el enlace para reset E-mail</a>
         `
     })
-
     res.json({success: true})
 })
 
 const updatePassword = catchError( async(req,res) => {
     const {token} = req.params
-
     const user = await User.findOne({where: {resetCode: token}})
-
     if (!user) {
         return res.status(401).json({message: Unauthorized})
     }
-
     const data = jwt.verify(
         token,
         process.env.TOKEN_SECRET)
-    
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
-    
-    await User.update({password: hashedPassword, resetCode: null}, {where: {id: data.user.id}})
 
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    await User.update({password: hashedPassword, resetCode: null}, {where: {id: data.user.id}})
     res.status(201).json({success: true})
 })
 

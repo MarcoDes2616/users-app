@@ -41,6 +41,7 @@ const User = sequelize.define('user', {
 User.prototype.toJSON = function () {
     const values = Object.assign({}, this.get());
     delete values.password;
+    delete values.resetCode;
     return values;
 }
 
